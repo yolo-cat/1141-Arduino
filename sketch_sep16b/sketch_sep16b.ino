@@ -21,5 +21,23 @@ switch(command){
         digitalWrite(LED_BUILTIN, LOW);
         delay(1000);
         break;
-  }
+//     輸入數字，x就亮x次，使用 Serial.parseInt()
+    case 'N':
+        // Serial.println("LED ON N times");
+        // Serial.println("Enter a number:");
+        // while (Serial.available() == 0) {
+        //   // wait for user input
+        // }
+        int n = Serial.parseInt();
+        // Serial.print("Blinking LED ");
+        // Serial.print(n);
+        // Serial.println(" times");
+        for (int i = 0; i < n; i++) {
+          digitalWrite(LED_BUILTIN, HIGH);
+          delay(500);
+          digitalWrite(LED_BUILTIN, LOW);
+          delay(500);
+        }
+        break;
+    }
 }
