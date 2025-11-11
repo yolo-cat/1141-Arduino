@@ -1,4 +1,5 @@
-// 20231115: 增加多次測量取平均值的功能，以過濾噪點，提高測距穩定性。
+```// 20231115: 增加多次測量取平均值的功能，以過濾噪點，提高測距穩定性。
+// 20231115: 將距離計算變數改為 float 型別，以修復整數運算造成的精度損失問題。
 
 // 引入 I2C 和 LCD 函式庫
 #include <Wire.h>
@@ -36,7 +37,7 @@ void setup() {
 }
 
 // 執行一次超音波測距並回傳距離（公分）
-long takeSingleReading() {
+float takeSingleReading() {
   digitalWrite(TrigPin, LOW);
   delayMicroseconds(2);
   digitalWrite(TrigPin, HIGH);
@@ -44,12 +45,13 @@ long takeSingleReading() {
   digitalWrite(TrigPin, LOW);
 
   long duration = pulseIn(EchoPin, HIGH);
-  return duration * 0.034 / 2;
+  // 使用浮點數運算以保留小數精度
+  return duration * 0.034 / 2.0;
 }
 
 void loop() {
   const int numReadings = 5;
-  long totalDistance = 0;
+  float totalDistance = 0;
 
   // 進行多次測量並加總
   for (int i = 0; i < numReadings; i++) {
@@ -58,7 +60,7 @@ void loop() {
   }
 
   // 計算平均距離
-  long distance = totalDistance / numReadings;
+  float distance = totalDistance / numReadings;
 
   // 顯示距離到 LCD
   lcd.setCursor(0, 1);
