@@ -2,6 +2,7 @@
 // 20231116: 將距離計算變更為浮點數運算，以提高精度。
 // 20231117: 處理 pulseIn() 函數超時情況，避免將無效讀值誤判為 0 公分。
 // 20231118: 改用整數運算並加入平滑濾波，優化距離顯示體驗。
+// 20231119: 移除自訂的 pulseIn() 超時處理，恢復預設行為。
 
 // 引入 I2C 和 LCD 函式庫
 #include <Wire.h>
@@ -19,8 +20,6 @@ int EchoPin = 16;
 // LCD 物件 (根據你的 LCD I2C 位址，常見為 0x27 或 0x3F)
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-// 超時設定 (微秒)，對應約 500cm 的最大偵測距離
-const unsigned long MAX_ECHO_TIME = 30000;
 // 平滑濾波因子，值越大，顯示越平滑
 const int SMOOTHING_FACTOR = 10;
 // 用於存放平滑後距離值的變數，-1 代表尚未初始化
@@ -45,54 +44,40 @@ long takeSingleReading() {
   delayMicroseconds(10);
   digitalWrite(TrigPin, LOW);
 
-  long duration = pulseIn(EchoPin, HIGH, MAX_ECHO_TIME);
+  // 使用 pulseIn 的預設超時行為（1秒）
+  long duration = pulseIn(EchoPin, HIGH);
 
-  if (duration == 0) {
-    return -1; // -1 表示超時或測量失敗
-  }
   // 使用整數運算 (duration * 17 / 1000) 替代 (duration * 0.034 / 2)
   return (duration * 17) / 1000;
 }
 
 void loop() {
-  const int numReadings = 1;
+  const int numReadings = 5;
   long totalDistance = 0;
-  int validReadings = 0;
 
   for (int i = 0; i < numReadings; i++) {
-    long reading = takeSingleReading();
-    if (reading >= 0) { // 只處理有效讀值
-      totalDistance += reading;
-      validReadings++;
-    }
+    totalDistance += takeSingleReading();
     delay(10);
   }
 
-  long distance;
-  if (validReadings > 0) {
-    long averageDistance = totalDistance / validReadings;
-    if (smoothedDistance == -1) {
-      // 如果是第一次有效讀取，直接賦值
-      smoothedDistance = averageDistance;
-    } else {
-      // 應用平滑濾波
-      smoothedDistance = (averageDistance + (SMOOTHING_FACTOR - 1) * smoothedDistance) / SMOOTHING_FACTOR;
-    }
-    distance = smoothedDistance;
+  long averageDistance = totalDistance / numReadings;
+  
+  if (smoothedDistance == -1) {
+    // 如果是第一次讀取，直接賦值
+    smoothedDistance = averageDistance;
   } else {
-    distance = 999; // 所有讀取都失敗
+    // 應用平滑濾波
+    smoothedDistance = (averageDistance + (SMOOTHING_FACTOR - 1) * smoothedDistance) / SMOOTHING_FACTOR;
   }
+  
+  long distance = smoothedDistance;
 
   // 顯示距離到 LCD
   lcd.setCursor(0, 1);
   lcd.print("      ");
   lcd.setCursor(0, 1);
-  if (distance >= 999) {
-    lcd.print(">999 cm");
-  } else {
-    lcd.print(distance);
-    lcd.print(" cm");
-  }
+  lcd.print(distance);
+  lcd.print(" cm");
 
   // 根據距離區間控制蜂鳴器
   if (distance < 33) {
